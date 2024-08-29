@@ -24,12 +24,18 @@ void* memcpy(void* dest, const void* src, size_t num);
 
 #define bpf_trace_message(fmt, ...)
 
-REGISTER_START()
-REGISTER_TABLE(MyFilter_byte_counter, BPF_MAP_TYPE_ARRAY, u32, MyFilter_byte_counter_value, 1)
-BPF_ANNOTATE_KV_PAIR(MyFilter_byte_counter, u32, MyFilter_byte_counter_value)
-REGISTER_END()
+//REGISTER_START()
+//REGISTER_TABLE(MyFilter_byte_counter, BPF_MAP_TYPE_ARRAY, u32, MyFilter_byte_counter_value, 1)
+//BPF_ANNOTATE_KV_PAIR(MyFilter_byte_counter, u32, MyFilter_byte_counter_value)
+//REGISTER_END()
+struct {
+    __uint(type, BPF_MAP_TYPE_ARRAY);
+    __uint(max_entries, 1);
+    __type(key, u32);
+    __type(value, u32);
+} MyFilter_byte_counter SEC(".maps");
 
-SEC("prog")
+SEC("classifier")
 int ebpf_filter(SK_BUFF *skb){
     struct headers hdr = {
         .ethernet = {
