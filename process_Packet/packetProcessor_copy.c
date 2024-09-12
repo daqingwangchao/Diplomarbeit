@@ -13,6 +13,14 @@ enum ebpf_errorCodes {
     ParserInvalidArgument,
 };
 
+// Use a simpler format string for bpf_trace_printk
+#define bpf_debug(fmt, ...)                            \
+    ({                                                 \
+        char ____fmt[] = fmt;                          \
+        bpf_trace_printk(____fmt, sizeof(____fmt),     \
+                         ##__VA_ARGS__);               \
+    })
+
 #define EBPF_MASK(t, w) ((((t)(1)) << (w)) - (t)1)
 #define BYTES(w) ((w) / 8)
 #define write_partial(a, s, v) do { u8 mask = EBPF_MASK(u8, s); *((u8*)a) = ((*((u8*)a)) & ~mask) | (((v) >> (8 - (s))) & mask); } while (0)
@@ -107,6 +115,12 @@ int ebpf_filter(SK_BUFF *skb){
         hdr.ipv4.ebpf_valid = 1;
         ebpf_headerStart += BYTES(160);
 
+        // After parsing IPv4 header
+        //if (hdr.ipv4.ebpf_valid) {
+        //    bpf_trace_printk("IPv4: src=%x, dst=%x, proto=%d, ttl=%d\n", 
+        //                    hdr.ipv4.srcAddr, hdr.ipv4.dstAddr, hdr.ipv4.protocol, hdr.ipv4.ttl);
+        //}
+
 ;
          goto accept;
     }
@@ -123,6 +137,10 @@ int ebpf_filter(SK_BUFF *skb){
 
         hdr.ethernet.ebpf_valid = 1;
         ebpf_headerStart += BYTES(112);
+
+        // After parsing Ethernet header
+        //bpf_trace_printk("Ethernet: src=%llx, dst=%llx, type=0x%x\n", 
+        //             hdr.ethernet.srcAddr, hdr.ethernet.dstAddr, hdr.ethernet.etherType);
 
 ;
         u16 select_0;
@@ -232,8 +250,12 @@ if (/* hdr.ipv4.isValid() */
 ;
                 if (accept) {
 if (hdr.ipv4.ttl > 1) {
-                        hdr.ipv4.ttl = (hdr.ipv4.ttl + 255);                    }
-
+                        //hdr.ipv4.ttl = (hdr.ipv4.ttl + 255); 
+                          bpf_debug("Debug: Decremented TTL, old value=%d\n", hdr.ipv4.ttl);  
+                          hdr.ipv4.ttl--;
+                          bpf_debug("Debug: Decremented TTL, new value=%d\n", hdr.ipv4.ttl);                  
+                      }
+                
                     else {
 /* drop_1() */
 {
