@@ -1,0 +1,71 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test-pod-nginx-master
+spec:
+  nodeName: k8s-master3  # master节点
+  containers:
+  - name: nginx
+    image: nginx
+    ports:
+    - containerPort: 80
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: wrk-scripts
+data:
+  payload.lua: |
+    -- 从环境变量获取size
+    local function parse_size()
+        local size_str = os.getenv("PAYLOAD_SIZE") or "1KB"
+        local number = tonumber(string.match(size_str, "%d+"))
+        local unit = string.match(size_str, "%a+")
+        
+        if unit == "KB" then
+            return number * 1024
+        elseif unit == "MB" then
+            return number * 1024 * 1024
+        else
+            return number
+        end
+    end
+
+    -- 生成测试数据
+    local size = parse_size()
+    local payload = string.rep("a", size)
+
+    -- 构造请求
+    request = function()
+        local headers = {}
+        headers["Content-Type"] = "application/json"
+        return wrk.format("POST", "/", headers, payload)
+    end
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test-pod-nginx-node1
+spec:
+  nodeName: k8s-node1
+  containers:
+  - name: wrk2
+    image: ubuntu:24.04
+    command:
+    - "/bin/bash"
+    - "-c"
+    - |
+      apt-get update && \
+      apt-get install -y git build-essential libssl-dev zlib1g-dev && \
+      git clone https://github.com/giltene/wrk2.git && \
+      cd wrk2 && \
+      make && \
+      echo "WRK2 installation completed" && \
+      sleep infinity
+    volumeMounts:
+    - name: scripts
+      mountPath: /scripts
+  volumes:
+  - name: scripts
+    configMap:
+      name: wrk-scripts

@@ -1,0 +1,17 @@
+# bookinfo-network-policy.yaml
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: bookinfo-productpage
+  namespace: bookinfo
+spec:
+  endpointSelector:
+    matchLabels:
+      app: productpage
+  ingress:
+    - fromEndpoints:
+        - {}
+      toPorts:
+        - ports:
+            - port: "9080"
+              protocol: TCP

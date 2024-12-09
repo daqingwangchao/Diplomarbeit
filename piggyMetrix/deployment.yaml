@@ -1,0 +1,231 @@
+# piggymetrics-complete.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: piggymetrics
+---
+# Config Service Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: config
+  namespace: piggymetrics
+spec:
+  selector:
+    matchLabels:
+      app: config
+  template:
+    metadata:
+      labels:
+        app: config
+    spec:
+      containers:
+      - name: config
+        image: sqshq/piggymetrics-config
+        ports:
+        - containerPort: 8888
+        env:
+        - name: CONFIG_SERVICE_PASSWORD
+          value: "password"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: config
+  namespace: piggymetrics
+spec:
+  ports:
+  - port: 8888
+  selector:
+    app: config
+---
+# MongoDB Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mongodb
+  namespace: piggymetrics
+spec:
+  selector:
+    matchLabels:
+      app: mongodb
+  template:
+    metadata:
+      labels:
+        app: mongodb
+    spec:
+      containers:
+      - name: mongodb
+        image: mongo:3.6
+        ports:
+        - containerPort: 27017
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongodb
+  namespace: piggymetrics
+spec:
+  ports:
+  - port: 27017
+  selector:
+    app: mongodb
+---
+# Registry Service Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: registry
+  namespace: piggymetrics
+spec:
+  selector:
+    matchLabels:
+      app: registry
+  template:
+    metadata:
+      labels:
+        app: registry
+    spec:
+      containers:
+      - name: registry
+        image: sqshq/piggymetrics-registry
+        ports:
+        - containerPort: 8761
+        env:
+        - name: CONFIG_SERVICE_PASSWORD
+          value: "password"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: registry
+  namespace: piggymetrics
+spec:
+  ports:
+  - port: 8761
+  selector:
+    app: registry
+---
+# Gateway Service Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gateway
+  namespace: piggymetrics
+spec:
+  selector:
+    matchLabels:
+      app: gateway
+  template:
+    metadata:
+      labels:
+        app: gateway
+    spec:
+      containers:
+      - name: gateway
+        image: sqshq/piggymetrics-gateway
+        ports:
+        - containerPort: 4000
+        env:
+        - name: CONFIG_SERVICE_PASSWORD
+          value: "password"
+        - name: NOTIFICATION_SERVICE_PASSWORD
+          value: "password"
+        - name: STATISTICS_SERVICE_PASSWORD
+          value: "password"
+        - name: ACCOUNT_SERVICE_PASSWORD
+          value: "password"
+        - name: MONGODB_PASSWORD
+          value: "password"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gateway
+  namespace: piggymetrics
+spec:
+  type: NodePort
+  ports:
+  - port: 4000
+    targetPort: 4000
+    nodePort: 30002
+  selector:
+    app: gateway
+---
+# Account Service Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: account-service
+  namespace: piggymetrics
+spec:
+  selector:
+    matchLabels:
+      app: account-service
+  template:
+    metadata:
+      labels:
+        app: account-service
+    spec:
+      containers:
+      - name: account-service
+        image: sqshq/piggymetrics-account-service
+        ports:
+        - containerPort: 6000
+        env:
+        - name: CONFIG_SERVICE_PASSWORD
+          value: "password"
+        - name: ACCOUNT_SERVICE_PASSWORD
+          value: "password"
+        - name: MONGODB_PASSWORD
+          value: "password"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: account-service
+  namespace: piggymetrics
+spec:
+  ports:
+  - port: 6000
+  selector:
+    app: account-service
+---
+# Statistics Service Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: statistics-service
+  namespace: piggymetrics
+spec:
+  selector:
+    matchLabels:
+      app: statistics-service
+  template:
+    metadata:
+      labels:
+        app: statistics-service
+    spec:
+      containers:
+      - name: statistics-service
+        image: sqshq/piggymetrics-statistics-service
+        ports:
+        - containerPort: 7000
+        env:
+        - name: CONFIG_SERVICE_PASSWORD
+          value: "password"
+        - name: MONGODB_PASSWORD
+          value: "password"
+        - name: STATISTICS_SERVICE_PASSWORD
+          value: "password"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: statistics-service
+  namespace: piggymetrics
+spec:
+  ports:
+  - port: 7000
+  selector:
+    app: statistics-service

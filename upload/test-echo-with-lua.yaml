@@ -1,0 +1,103 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test-pod-echo-master
+  labels:             # 添加标签以匹配Service的selector
+    pod: test-pod-echo-master
+spec:
+  nodeName: k8s-master3
+  containers:
+  - name: echo
+    image: jmalloc/echo-server
+    ports:
+    - containerPort: 8080
+---
+apiVersion: v1
+kind: Service    # Service配置保持不变
+metadata:
+  name: echo-master
+spec:
+  selector:
+    pod: test-pod-echo-master
+  ports:
+  - port: 80
+    targetPort: 8080
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+ name: wrk-scripts
+data:
+ test.lua: |
+   -- 从环境变量获取size
+   local function parse_size()
+       local size_str = os.getenv("PAYLOAD_SIZE") or "1KB"
+       local number = tonumber(string.match(size_str, "%d+"))
+       local unit = string.match(size_str, "%a+")
+       
+       if unit == "KB" then
+           return number * 1024
+       elseif unit == "MB" then
+           return number * 1024 * 1024
+       else
+           return number
+       end
+   end
+
+   -- 生成测试数据
+   local size = parse_size()
+   local payload = string.rep("a", size)
+   
+   -- 从环境变量获取测试类型
+   local test_type = os.getenv("TEST_TYPE") or "upload"
+   
+   -- 构造请求
+   request = function()
+       local headers = {}
+       
+       if test_type == "upload" then
+           -- 上行测试: POST请求带payload
+           headers["Content-Type"] = "application/json"
+           return wrk.format("POST", "/", headers, payload)
+       else
+           -- 下行测试: GET请求
+           headers["Content-Length"] = tostring(size)  -- 请求指定大小的响应
+           return wrk.format("GET", "/", headers)
+       end
+   end
+
+   -- 响应处理
+   response = function(status, headers, body)
+       if status ~= 200 then
+           print("Error status: " .. status)
+       end
+   end
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test-pod-node1
+spec:
+  nodeName: k8s-node1
+  containers:
+  - name: wrk2
+    image: ubuntu:24.04    # 改用 Ubuntu
+    command:
+    - "/bin/bash"
+    - "-c"
+    - |
+      echo "Starting installation..."
+      apt-get update && \
+      apt-get install -y git build-essential libssl-dev zlib1g-dev curl iputils-ping && \
+      git clone https://github.com/giltene/wrk2.git && \
+      cd wrk2 && \
+      make && \
+      echo "WRK2 installation completed" && \
+      tail -f /dev/null
+    volumeMounts:
+    - name: scripts
+      mountPath: /scripts
+  volumes:
+  - name: scripts
+    configMap:
+      name: wrk-scripts
