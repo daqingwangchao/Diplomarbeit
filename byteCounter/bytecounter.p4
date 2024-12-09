@@ -59,8 +59,7 @@ control MyFilter(inout headers hdr, out bool accept) {
         if (hdr.ipv4.isValid()) {
             // Cast totalLen to bit<32> and add to counter
             byte_counter.add(32w0, (bit<32>)hdr.ipv4.totalLen);
-            // Update byteCount
-            //byteCount = byteCount + (bit<32>)hdr.ipv4.totalLen;
+
         }
         // Set accept to true
         accept = true;
